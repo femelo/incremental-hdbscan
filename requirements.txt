@@ -1,0 +1,6 @@
+argparse
+sklearn
+seaborn
+matplotlib
+termcolor
+munkres
