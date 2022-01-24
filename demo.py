@@ -19,9 +19,9 @@ This will plot points that are naturally clustered and added incrementally,
 and then loop through all the hierarchical clusters recognized by the
 algorithm.
 .""")
-parser.add_argument('--nitems', type=int, default=3000,
+parser.add_argument('--nitems', type=int, default=12000,
                     help="Number of items (default 200).")
-parser.add_argument('--niters', type=int, default=20,
+parser.add_argument('--niters', type=int, default=80,
                     help="Clusters are shown in NITERS stage while being "
                     "added incrementally (default 4).")
 parser.add_argument('--centers', type=int, default=5,
@@ -75,11 +75,18 @@ k = 0
 for points in np.split(data, args.niters):
     k += 1
     cprint('Step {}'.format(k), 'cyan')
+    # Rotate points
+    delta_angle = (np.pi) * k / args.niters
+    rotation_matrix = np.array([
+        [np.cos(delta_angle), -np.sin(delta_angle)],
+        [np.sin(delta_angle),  np.cos(delta_angle)]])
+    points = points.dot(rotation_matrix)
     fig.suptitle('Time step = {:d}'.format(k), fontsize=18)
     clusters, lbls, probs, stabs, ctree, slt = incremental_hdbscan.fit(points, params)
     nknown = params['data_id']
 
-    xknown, yknown, labels_known = x[nknown], y[nknown], labels[nknown]
+    # xknown, yknown, labels_known = x[nknown], y[nknown], labels[nknown]
+    xknown, yknown, labels_known = params['raw_data'][:, 0], params['raw_data'][:, 1], labels[nknown]
     color = ['rgbcmyk'[l % 7] for l in labels_known]
     genericPlot1.set_offsets(np.c_[xknown, yknown])
     genericPlot1.set_color(color)

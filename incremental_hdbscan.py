@@ -236,14 +236,14 @@ def update_forest(params, first_iteration=False):
         cheapest_destination[i] = id_map[cheapest_destination[i]]
     
     # Find edges that changed
-    cheapest_destination_old = params['cheapest_edges']
-    mask = cheapest_destination[:cheapest_destination_old.shape[0]] != cheapest_destination_old
+    cheapest_destination_prv = params['cheapest_edges']
+    mask = cheapest_destination[:cheapest_destination_prv.shape[0]] != cheapest_destination_prv
     heavy_edges = []
-    for i in range(cheapest_destination_old.shape[0]):
+    for i in range(cheapest_destination_prv.shape[0]):
         if not mask[i]:
             continue
         u = id_map[i]
-        v = cheapest_destination_old[i]
+        v = cheapest_destination_prv[i]
         if v == -1:
             # Vertex was removed
             continue
@@ -464,31 +464,20 @@ def reassign_labels(params):
     if not 'centroids' in params or params['centroids'] is None or params['centroids'].shape[0] == 0:
         params['centroids'] = centroids
     else:
-        centroids_old = params['centroids']
-        centroid_distance_matrix = pairwise_distances(centroids, centroids_old)
+        centroids_prv = params['centroids']
+        n_prv = centroids_prv.shape[0]
+        current_indexes = list(range(centroids.shape[0]))
+        centroid_distance_matrix = pairwise_distances(centroids, centroids_prv)
         assignment_algorithm = Munkres()
-        if centroids.shape[0] > centroids_old.shape[0]:
+        if n > n_prv:
             solution_transposed = assignment_algorithm.compute(centroid_distance_matrix.T)
-            solution = []
-            rows = []
-            cols = []
-            for i, j in solution_transposed:
-                solution.append((j, i))
-                if j not in rows:
-                    rows.append(j)
-                if i not in cols:
-                    cols.append(i)
+            cols, rows = zip(*solution_transposed)
+            solution = list(zip(rows, cols))
         else:
             solution = assignment_algorithm.compute(centroid_distance_matrix)
-            rows = []
-            cols = []
-            for i, j in solution:
-                if i not in rows:
-                    rows.append(i)
-                if j not in cols:
-                    cols.append(j)
-        remaining_rows = list(set(range(centroids.shape[0])) - set(rows))
-        remaining_cols = list(set(range(centroids.shape[0])) - set(cols))
+            rows, cols = zip(*solution)
+        remaining_rows = list(set(current_indexes) - set(rows))
+        remaining_cols = list(set(current_indexes) - set(cols))
         for i, l in enumerate(remaining_rows):
             solution.append((l, remaining_cols[i]))
         needs_reassignment = False
@@ -501,11 +490,13 @@ def reassign_labels(params):
             labels = np.array([assignment_map[l] if l > -1 else -1 for l in labels], dtype=int)
             clusters = dict([(assignment_map[l], indexes) if l > -1 else (-1, indexes) for l in clusters])
             inverted_map = dict([(value, key) for key, value in assignment_map.items()])
-            centroids = centroids[[inverted_map[l] for l in range(centroids.shape[0])],:]
+            if n < n_prv:
+                centroids_prv[[assignment_map[l] for l in current_indexes],:] = centroids
+                centroids = centroids_prv
+            else:
+                centroids = centroids[[inverted_map[l] for l in current_indexes],:]
+
         # Save new centroids
-        if centroids_old.shape[0] > centroids.shape[0]:
-            centroids_old[:centroids.shape[0]] = centroids
-            centroids = centroids
         params['centroids'] = centroids
 
     # Trick with labels
