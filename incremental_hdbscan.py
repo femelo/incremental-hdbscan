@@ -169,7 +169,6 @@ def remove_data(params, first_iteration=False):
             if removed_edges and is_graph_disconnected(forest[tree_id]):
                 split_tree(forest, tree_id, connection_check=True)
 
-        # Don't change SLT for now
         params['labels'] = labels[indexes]
         params['window_start'] = k_0 + 1
     # Iterate
@@ -491,10 +490,10 @@ def reassign_labels(params):
             clusters = dict([(assignment_map[l], indexes) if l > -1 else (-1, indexes) for l in clusters])
             inverted_map = dict([(value, key) for key, value in assignment_map.items()])
             if n < n_prv:
-                centroids_prv[[assignment_map[l] for l in current_indexes],:] = centroids
+                centroids_prv[[assignment_map[l] for l in current_indexes], :] = centroids
                 centroids = centroids_prv
             else:
-                centroids = centroids[[inverted_map[l] for l in current_indexes],:]
+                centroids = centroids[[inverted_map[l] for l in current_indexes], :]
 
         # Save new centroids
         params['centroids'] = centroids
