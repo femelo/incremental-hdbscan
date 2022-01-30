@@ -181,7 +181,11 @@ def update_data(X, params, first_iteration=False):
         params['data_time'] = params['time_step'] * np.ones(X.shape[0], dtype=int)
         return
     params['raw_data'] = np.concatenate((params['raw_data'], X), axis=0)
-    new_data_id = np.arange(max(params['data_id']) + 1, max(params['data_id']) + 1 + X.shape[0])
+    if params['data_id'].shape[0] > 0:
+        start_id = max(params['data_id']) + 1
+    else:
+        start_id = 0
+    new_data_id = np.arange(start_id, start_id + X.shape[0])
     params['data_id'] = np.concatenate((params['data_id'], new_data_id))
     new_time_step = params['time_step'] * np.ones(X.shape[0], dtype=int)
     params['data_time'] = np.concatenate((params['data_time'], new_time_step))
@@ -192,10 +196,13 @@ def update_distance_matrix(X, params, first_iteration=False):
         params['distance_matrix'] = innov_distance_matrix
         return
     n = params['raw_data'].shape[0] - X.shape[0]
-    cross_distance_matrix = pairwise_distances(params['raw_data'][:n, :], X, metric=params['metric'])
-    augmented_distance_matrix = np.concatenate(
-        (np.concatenate((params['distance_matrix'], cross_distance_matrix), axis=1),
-        np.concatenate((cross_distance_matrix.T, innov_distance_matrix), axis=1)), axis=0)
+    if n > 0:
+        cross_distance_matrix = pairwise_distances(params['raw_data'][:n, :], X, metric=params['metric'])
+        augmented_distance_matrix = np.concatenate(
+            (np.concatenate((params['distance_matrix'], cross_distance_matrix), axis=1),
+            np.concatenate((cross_distance_matrix.T, innov_distance_matrix), axis=1)), axis=0)
+    else:
+        augmented_distance_matrix = innov_distance_matrix
     params['distance_matrix'] = augmented_distance_matrix
 
 def update_mutual_reachability(params):
@@ -321,7 +328,7 @@ def incremental_boruvka_preprocessing(params, first_iteration=False):
     cost_matrix = params['mutual_reachability_matrix']
     id_map_inv = params['id_map_inverse']
     G = forest
-    if first_iteration:
+    if first_iteration or len(G.keys()) == 0:
         e = F.pop(0)
         u, v = e
         if u > v:
